@@ -2,6 +2,10 @@
 <resources>
 
     <string name="app_name">Twitter Client</string>
-    <string name="login_label">Log in</string>
+    <string name="login_label">Connect to Twitter</string>
+    <string name="title_activity_tweet_feed">Home</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
 
 </resources>
