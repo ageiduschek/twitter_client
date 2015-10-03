@@ -4,8 +4,8 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.text.format.DateUtils;
-import android.util.Log;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -29,6 +29,10 @@ public final class Util {
     }
 
     public static String getRelativeTimestamp(long timeMs) {
+        if (System.currentTimeMillis() - timeMs <= DateUtils.MINUTE_IN_MILLIS) {
+            return "Just now";
+        }
+
         return DateUtils.getRelativeTimeSpanString(timeMs).toString();
     }
 

@@ -1,8 +1,5 @@
 package com.codepath.apps.twitterclient;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.scribe.builder.api.Api;
 import org.scribe.builder.api.TwitterApi;
 
@@ -70,5 +67,12 @@ public class TwitterClient extends OAuthBaseClient {
             params.put("max_id", Long.toString(maxId + 1));
         }
 		getClient().get(apiUrl, params, handler);
+    }
+
+    public void postTweet(String tweet, AsyncHttpResponseHandler handler) {
+        String apiUrl = getApiUrl("/statuses/update.json");
+        RequestParams params = new RequestParams();
+        params.put("status", tweet);
+        getClient().post(apiUrl, params, handler);
     }
 }

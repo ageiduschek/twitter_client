@@ -7,5 +7,11 @@
 
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="compose">Compose</string>
+
+    <string name="tweet_compose_hint">Enter tweet here</string>
+    <string name="compose_title">New Tweet</string>
+    <string name="post">Post</string>
+    <string name="cancel">Cancel</string>
 
 </resources>

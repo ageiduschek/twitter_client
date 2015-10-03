@@ -22,10 +22,18 @@ import java.util.List;
  * Layer that retrieves data from database or server, as appropriate
  */
 public class TwitterModel {
+
+    public interface OnPostFinishDelegate {
+        /**
+         * Callback when results come back in query.
+         */
+        public void onQueryComplete(boolean networkSuccess);
+    }
+
     public interface TweetListQueryDelegate {
         /**
-         * Callback when results come back in query. May get called more than once
-         * @param result Query result, may be null
+         * Callback when results come back in query.
+         * @param result Query result
          */
         public void onQueryComplete(List<Tweet> result);
     }
@@ -67,6 +75,28 @@ public class TwitterModel {
     public void getNewHomeTweets(final TweetListQueryDelegate delegate) {
         mIOHandler.post(new GetNewTweetsTask(delegate));
     }
+
+
+    public void postTweet(final String tweet, final OnPostFinishDelegate delegate) {
+        if (!Util.isNetworkAvailable(mContext)) {
+            delegate.onQueryComplete(false);
+            return;
+        }
+
+        TwitterApplication.getRestClient().postTweet(tweet, new JsonHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                delegate.onQueryComplete(true);
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                generalFailureResponse(errorResponse);
+                delegate.onQueryComplete(false);
+            }
+        });
+    }
+
 
     private class GetNewTweetsTask extends GetTweetsTask {
 
@@ -200,7 +230,7 @@ public class TwitterModel {
         }
     }
 
-    public long getMostRecentTweetId() {
+    private long getMostRecentTweetId() {
         Util.assertNotUIThread();
         List<Tweet> result = new Select()
                                 .from(Tweet.class)
@@ -214,7 +244,7 @@ public class TwitterModel {
         return 0;
     }
 
-    public List<Tweet> getLocalTweetsPage(long newestId, int limit) {
+    private List<Tweet> getLocalTweetsPage(long newestId, int limit) {
         Util.assertNotUIThread();
         return new Select()
                 .from(Tweet.class)

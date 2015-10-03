@@ -1,5 +1,6 @@
 package com.codepath.apps.twitterclient.activities;
 
+import android.support.v4.app.FragmentManager;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -10,13 +11,14 @@ import android.widget.Toast;
 
 import com.codepath.apps.twitterclient.R;
 import com.codepath.apps.twitterclient.adapters.TweetsListAdapter;
+import com.codepath.apps.twitterclient.fragments.ComposeTweetDialog;
 import com.codepath.apps.twitterclient.helpers.EndlessScrollListener;
 import com.codepath.apps.twitterclient.helpers.TwitterModel;
 import com.codepath.apps.twitterclient.models.Tweet;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TweetFeedActivity extends AppCompatActivity {
+public class TweetFeedActivity extends AppCompatActivity implements ComposeTweetDialog.OnComposeTweetActionListener {
     private TwitterModel mTwitterModel;
     private TweetsListAdapter mTweetsListAdapter;
     private ListView lvTweets;
@@ -80,7 +82,7 @@ public class TweetFeedActivity extends AppCompatActivity {
                     }
 
                     mTweetsListAdapter.addAll(result);
-                    Toast.makeText(getApplicationContext(), "ADDED " + result.size() + " TWEETS", Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(getApplicationContext(), "ADDED " + result.size() + " TWEETS", Toast.LENGTH_SHORT).show();
                 }
                 mSwipeContainer.setRefreshing(false);
             }
@@ -103,10 +105,27 @@ public class TweetFeedActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_compose_tweet) {
+            showComposeDialog();
             return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private ComposeTweetDialog mComposeDialog;
+
+    private void showComposeDialog() {
+        FragmentManager fm = getSupportFragmentManager();
+        mComposeDialog = ComposeTweetDialog.newInstance();
+        mComposeDialog.show(fm, "fragment_compose_tweet_dialog");
+    }
+
+    @Override
+    public void onTweetSave(boolean success) {
+        if (mComposeDialog != null) {
+            mComposeDialog.dismiss();
+            refreshTimeline();
+        }
     }
 }
