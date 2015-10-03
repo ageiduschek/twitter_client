@@ -3,10 +3,17 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 tools:context="com.codepath.apps.twitterclient.activities.TweetFeedActivity">
+    <android.support.v4.widget.SwipeRefreshLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/swipeContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
-    <ListView
-        android:id="@+id/lvTweets"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"/>
+        <ListView
+            android:id="@+id/lvTweets"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+    </android.support.v4.widget.SwipeRefreshLayout>
 
 </RelativeLayout>

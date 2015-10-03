@@ -1,23 +1,35 @@
 package com.codepath.apps.twitterclient.models;
 
+import android.util.Log;
+
+import com.activeandroid.Model;
+import com.activeandroid.annotation.Column;
+import com.activeandroid.annotation.Table;
+import com.activeandroid.query.Select;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
  * Model of a Twitter user
  */
-public class User {
+@Table(name = "Users")
+public class User extends Model {
+    @Column(name = "remote_id", unique = true, onUniqueConflict = Column.ConflictAction.REPLACE)
+    private long remoteId;
+    @Column(name = "name")
     private String name;
-    private long uid;
+    @Column(name = "screen_name")
     private String screenName;
+    @Column(name = "profile_image_url")
     private String profileImageUrl;
 
     public String getName() {
         return name;
     }
 
-    public long getUid() {
-        return uid;
+    public long getRemoteId() {
+        return remoteId;
     }
 
     public String getScreenName() {
@@ -28,13 +40,37 @@ public class User {
         return profileImageUrl;
     }
 
-    public static User fromJson(JSONObject json) {
+    public User() {
+        super();
+    }
+
+    public static User findOrCreateFromJson(JSONObject json) {
+        long remoteId;
+        try {
+            remoteId = json.getLong("id"); // get just the remote id
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
+        User existingUser =
+                new Select().from(User.class).where("remote_id = ?", remoteId).executeSingle();
+        if (existingUser != null) {
+            return existingUser;
+        }
+
+        // create and return new user
+        User user = fromJSON(json);
+        user.save();
+        return user;
+    }
+
+    private static User fromJSON(JSONObject json) {
         User user = new User();
         try {
             user.name = json.getString("name");
-            user.uid = json.getLong("id");
+            user.remoteId = json.getLong("id");
             user.screenName = json.getString("screen_name");
             user.profileImageUrl = json.getString("profile_image_url");
+            user.save();
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }

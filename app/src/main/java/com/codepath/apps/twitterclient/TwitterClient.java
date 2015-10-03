@@ -1,5 +1,8 @@
 package com.codepath.apps.twitterclient;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.scribe.builder.api.Api;
 import org.scribe.builder.api.TwitterApi;
 
@@ -42,13 +45,30 @@ public class TwitterClient extends OAuthBaseClient {
 	 */
 
 
-	public void getHomeTweets(AsyncHttpResponseHandler handler) {
-		String apiUrl = getApiUrl("/statuses/home_timeline.json");
-		RequestParams params = new RequestParams();
-		params.put("count", "25");
-		params.put("since_id", "1");
-		getClient().get(apiUrl, params, handler);
-	}
+	private static final int RESULTS_PER_PAGE = 100;
 
-	// TODO: Add more methods here
+    /**
+     *
+     * @param maxId If greater than 0, indicates that we are querying for results with an ID
+     *              less than (that is, older than) to the specified ID.
+     * @param handler handles the http response
+     */
+	public void getHomeTweets(long sinceId, long maxId, AsyncHttpResponseHandler handler) {
+		if (sinceId > 0 && maxId > 0) {
+            throw new RuntimeException("Can't define since_id and max_id simultaneously");
+        }
+
+        String apiUrl = getApiUrl("/statuses/home_timeline.json");
+		RequestParams params = new RequestParams();
+		params.put("count", Integer.toString(RESULTS_PER_PAGE));
+
+        if (sinceId > 0) {
+            params.put("since_id", Long.toString(sinceId));
+        }
+
+        if (maxId > 0) {
+            params.put("max_id", Long.toString(maxId + 1));
+        }
+		getClient().get(apiUrl, params, handler);
+    }
 }
