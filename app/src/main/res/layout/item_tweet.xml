@@ -25,10 +25,13 @@
             android:id="@+id/tvScreenName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
-        <TextView
+        <com.codepath.apps.twitterclient.views.LinkifiedTextView
             android:id="@+id/tvTweetBody"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:autoLink="all"
+            android:linksClickable="true"
+            />
         <TextView
             android:id="@+id/tvCreatedAt"
             android:layout_width="wrap_content"
