@@ -44,27 +44,19 @@ public class User extends Model {
         super();
     }
 
-    public static User findOrCreateFromJson(JSONObject json) {
+    public static User createOrUpdateFromJSON(JSONObject json) {
         long remoteId;
         try {
             remoteId = json.getLong("id"); // get just the remote id
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
-        User existingUser =
-                new Select().from(User.class).where("remote_id = ?", remoteId).executeSingle();
-        if (existingUser != null) {
-            return existingUser;
+
+        User user = new Select().from(User.class).where("remote_id = ?", remoteId).executeSingle();
+        if (user == null) {
+            user = new User();
         }
 
-        // create and return new user
-        User user = fromJSON(json);
-        user.save();
-        return user;
-    }
-
-    private static User fromJSON(JSONObject json) {
-        User user = new User();
         try {
             user.name = json.getString("name");
             user.remoteId = json.getLong("id");

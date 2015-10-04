@@ -1,7 +1,5 @@
 package com.codepath.apps.twitterclient.models;
 
-import android.util.Log;
-
 import com.activeandroid.Model;
 import com.activeandroid.annotation.Column;
 import com.activeandroid.annotation.Table;
@@ -71,7 +69,7 @@ public class Tweet extends Model {
         try {
             tweet.body = json.getString("text");
             tweet.remoteId = json.getLong("id");
-            tweet.user = User.findOrCreateFromJson(json.getJSONObject("user"));
+            tweet.user = User.createOrUpdateFromJSON(json.getJSONObject("user"));
             tweet.createdAt = Util.twitterDateToMillseconds(json.getString("created_at"));
             tweet.save();
         } catch (JSONException e) {

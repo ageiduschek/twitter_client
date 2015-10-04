@@ -22,6 +22,7 @@ import java.util.List;
 public class TweetsListAdapter extends ArrayAdapter<Tweet> {
     private class TweetSubViews {
         ImageView ivProfileImage;
+        TextView tvName;
         TextView tvScreenName;
         TextView tvTweetBody;
         TextView tvCreatedAt;
@@ -40,6 +41,7 @@ public class TweetsListAdapter extends ArrayAdapter<Tweet> {
             subViews = new TweetSubViews();
             subViews.ivProfileImage = (ImageView) convertView.findViewById(R.id.ivProfileImage);
             subViews.tvTweetBody = (TextView) convertView.findViewById(R.id.tvTweetBody);
+            subViews.tvName = (TextView) convertView.findViewById(R.id.tvName);
             subViews.tvScreenName = (TextView) convertView.findViewById(R.id.tvScreenName);
             subViews.tvCreatedAt = (TextView) convertView.findViewById(R.id.tvCreatedAt);
             convertView.setTag(subViews);
@@ -49,7 +51,8 @@ public class TweetsListAdapter extends ArrayAdapter<Tweet> {
 
         Tweet tweet = getItem(position);
         subViews.tvTweetBody.setText(tweet.getBody());
-        subViews.tvScreenName.setText(tweet.getUser().getScreenName());
+        subViews.tvName.setText(tweet.getUser().getName());
+        subViews.tvScreenName.setText("@" + tweet.getUser().getScreenName());
         subViews.tvCreatedAt.setText(Util.getRelativeTimestamp(tweet.getCreatedAt()));
 
         Picasso.with(getContext()).load(tweet.getUser().getProfileImageUrl()).into(subViews.ivProfileImage);
