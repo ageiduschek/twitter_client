@@ -28,7 +28,7 @@ public class TwitterModel {
         /**
          * Callback when results come back in query.
          */
-        public void onQueryComplete(boolean networkSuccess);
+        public void onQueryComplete(int errorMessage);
     }
 
     /**
@@ -91,20 +91,23 @@ public class TwitterModel {
 
     public void postTweet(final String tweet, final OnPostFinishDelegate delegate) {
         if (!Util.isNetworkAvailable(mContext)) {
-            delegate.onQueryComplete(false);
+            Log.d("ASDF", "HERE 1");
+            delegate.onQueryComplete(R.string.network_connection_error);
             return;
         }
 
         TwitterApplication.getRestClient().postTweet(tweet, new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                delegate.onQueryComplete(true);
+                Log.d("ASDF", "HERE 2");
+                delegate.onQueryComplete(0);
             }
 
             @Override
             public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                generalFailureResponse(errorResponse);
-                delegate.onQueryComplete(false);
+                int errorMessage = generalFailureResponse(errorResponse);
+                Log.d("ASDF", "HERE 3");
+                delegate.onQueryComplete(errorMessage);
             }
         });
     }
@@ -302,6 +305,8 @@ public class TwitterModel {
                     errorMessage = R.string.rate_limit_error;
                 } else if (code == 215) {
                     errorMessage = R.string.bad_auth_error;
+                } else if (code == 187) {
+                    errorMessage = R.string.duplicate_status_error;
                 } else {
                     errorMessage = R.string.network_connection_error;
                 }

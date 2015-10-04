@@ -16,6 +16,7 @@
     <string name="general_error">General Error</string>
     <string name="rate_limit_error">You\'ve reached your rate limit. Check back later.</string>
     <string name="bad_auth_error">Bad Authentication data</string>
-    <string name="network_connection_error">Failed to load tweets. Check your network connection.</string>
+    <string name="network_connection_error">Network Connection Error</string>
+    <string name="duplicate_status_error">Cannot post a duplicate status</string>
 
 </resources>

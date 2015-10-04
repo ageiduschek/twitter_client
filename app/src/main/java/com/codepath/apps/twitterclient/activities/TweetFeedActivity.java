@@ -133,10 +133,15 @@ public class TweetFeedActivity extends AppCompatActivity implements ComposeTweet
     }
 
     @Override
-    public void onTweetSave(boolean success) {
-        if (mComposeDialog != null) {
-            mComposeDialog.dismiss();
+    public void onTweetSave(int errorMessage) {
+        if (errorMessage == 0) {
+            if (mComposeDialog != null) {
+                mComposeDialog.dismiss();
+            }
             refreshTimeline();
+        } else {
+            Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT).show();
         }
+
     }
 }

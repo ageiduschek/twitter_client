@@ -82,9 +82,9 @@ public class ComposeTweetDialog extends DialogFragment {
     public void onTweetSubmit(String tweet) {
         mTwitterModel.postTweet(tweet, new TwitterModel.OnPostFinishDelegate() {
             @Override
-            public void onQueryComplete(boolean networkSuccess) {
+            public void onQueryComplete(int errorMessage) {
                 if (mListener != null) {
-                    mListener.onTweetSave(networkSuccess);
+                    mListener.onTweetSave(errorMessage);
                 }
             }
         });
@@ -116,7 +116,7 @@ public class ComposeTweetDialog extends DialogFragment {
      * activity.
      */
     public interface OnComposeTweetActionListener {
-        void onTweetSave(boolean success);
+        void onTweetSave(int errorMessage);
     }
 
 }
