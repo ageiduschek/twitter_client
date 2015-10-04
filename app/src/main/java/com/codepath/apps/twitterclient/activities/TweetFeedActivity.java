@@ -21,7 +21,6 @@ import java.util.List;
 public class TweetFeedActivity extends AppCompatActivity implements ComposeTweetDialog.OnComposeTweetActionListener {
     private TwitterModel mTwitterModel;
     private TweetsListAdapter mTweetsListAdapter;
-    private ListView lvTweets;
     private SwipeRefreshLayout mSwipeContainer;
 
     @Override
@@ -29,7 +28,7 @@ public class TweetFeedActivity extends AppCompatActivity implements ComposeTweet
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tweet_feed);
 
-        lvTweets = (ListView) findViewById(R.id.lvTweets);
+        ListView lvTweets = (ListView) findViewById(R.id.lvTweets);
         mTweetsListAdapter = new TweetsListAdapter(this, new ArrayList<Tweet>());
         lvTweets.setAdapter(mTweetsListAdapter);
 
@@ -72,19 +71,31 @@ public class TweetFeedActivity extends AppCompatActivity implements ComposeTweet
                                           getLoadTweetsDelegate(false /*isRefresh*/));
     }
 
-    private TwitterModel.TweetListQueryDelegate getLoadTweetsDelegate(final boolean isRefresh) {
-        return new TwitterModel.TweetListQueryDelegate() {
+    private TwitterModel.OnGetFinishDelegate<List<Tweet>> getLoadTweetsDelegate(final boolean isRefresh) {
+        return new TwitterModel.OnGetFinishDelegate<List<Tweet>>() {
             @Override
             public void onQueryComplete(List<Tweet> result) {
+                onFinishHelper(result, 0);
+            }
+
+            @Override
+            public void onIncompleteQuery(List<Tweet> partialResult, int errorMessage) {
+                onFinishHelper(partialResult, errorMessage);
+            }
+
+            public void onFinishHelper(List<Tweet> result, int errorMessage) {
                 if (result != null) {
                     if (isRefresh) {
                         mTweetsListAdapter.clear();
                     }
 
                     mTweetsListAdapter.addAll(result);
-//                    Toast.makeText(getApplicationContext(), "ADDED " + result.size() + " TWEETS", Toast.LENGTH_SHORT).show();
                 }
                 mSwipeContainer.setRefreshing(false);
+
+                if (errorMessage != 0) {
+                    Toast.makeText(getApplicationContext(), errorMessage, Toast.LENGTH_SHORT).show();
+                }
             }
         };
     }

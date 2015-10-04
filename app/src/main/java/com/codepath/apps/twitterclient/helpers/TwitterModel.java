@@ -7,6 +7,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.activeandroid.query.Select;
+import com.codepath.apps.twitterclient.R;
 import com.codepath.apps.twitterclient.TwitterApplication;
 import com.codepath.apps.twitterclient.models.Tweet;
 import com.loopj.android.http.JsonHttpResponseHandler;
@@ -30,12 +31,23 @@ public class TwitterModel {
         public void onQueryComplete(boolean networkSuccess);
     }
 
-    public interface TweetListQueryDelegate {
+    /**
+     *
+     * @param <T> The query result type
+     */
+    public interface OnGetFinishDelegate<T> {
         /**
          * Callback when results come back in query.
          * @param result Query result
          */
-        public void onQueryComplete(List<Tweet> result);
+        public void onQueryComplete(T result);
+
+        /**
+         *
+         * @param partialResult Local-only result
+         * @param errorMessage String describing error
+         */
+        public void onIncompleteQuery(T partialResult, int errorMessage);
     }
 
 
@@ -64,7 +76,7 @@ public class TwitterModel {
      * @param delegate handles the http response
      */
     public void getHomeTweetsBefore(long newestId,
-                                    final TweetListQueryDelegate delegate) {
+                                    final OnGetFinishDelegate<List<Tweet>> delegate) {
         if (newestId <= 0) {
             throw new RuntimeException("Invalid newestId");
         }
@@ -72,7 +84,7 @@ public class TwitterModel {
         mIOHandler.post(new GetTweetsBeforeTask(newestId, delegate));
     }
 
-    public void getNewHomeTweets(final TweetListQueryDelegate delegate) {
+    public void getNewHomeTweets(final OnGetFinishDelegate<List<Tweet>> delegate) {
         mIOHandler.post(new GetNewTweetsTask(delegate));
     }
 
@@ -98,20 +110,20 @@ public class TwitterModel {
     }
 
 
-    private class GetNewTweetsTask extends GetTweetsTask {
+    private class GetNewTweetsTask extends GetQueryTask<List<Tweet>> {
 
-        public GetNewTweetsTask(TweetListQueryDelegate delegate) {
+        public GetNewTweetsTask(OnGetFinishDelegate<List<Tweet>> delegate) {
             super(delegate);
         }
 
         @Override
-        protected List<Tweet> getLocalTweets() {
+        protected List<Tweet> getLocalResult() {
             return getLocalTweetsPage(0 /* newestId */, PAGE_SIZE);
         }
 
         @Override
         protected boolean shouldSkipRemoteQuery(List<Tweet> localTweetsResult) {
-            return !Util.isNetworkAvailable(mContext);
+            return false;
         }
 
         @Override
@@ -133,29 +145,34 @@ public class TwitterModel {
         }
 
         @Override
-        protected void getRemoteTweets(JsonHttpResponseHandler httpResponseHandler) {
+        protected void fetchRemoteResult(JsonHttpResponseHandler httpResponseHandler) {
             TwitterApplication.getRestClient().getHomeTweets(getMostRecentTweetId(),
                                                              0,
                                                              httpResponseHandler);
         }
+
+        @Override
+        protected List<Tweet> parseAndSaveRemoteResult(JSONArray resultJSON) {
+            return Tweet.fromJsonArray(resultJSON);
+        }
     }
 
-    private class GetTweetsBeforeTask extends GetTweetsTask {
+    private class GetTweetsBeforeTask extends GetQueryTask<List<Tweet>> {
         // Return tweets posted before this tweet
         private long mNewestId;
 
-        public GetTweetsBeforeTask(long newestId, TweetListQueryDelegate delegate) {
+        public GetTweetsBeforeTask(long newestId, OnGetFinishDelegate<List<Tweet>> delegate) {
             super(delegate);
             mNewestId = newestId;
         }
         @Override
-        protected List<Tweet> getLocalTweets() {
+        protected List<Tweet> getLocalResult() {
             return getLocalTweetsPage(mNewestId, PAGE_SIZE);
         }
 
         @Override
         protected boolean shouldSkipRemoteQuery(List<Tweet> localTweetsResult) {
-            return localTweetsResult.size() == PAGE_SIZE || !Util.isNetworkAvailable(mContext);
+            return localTweetsResult.size() == PAGE_SIZE;
         }
 
         @Override
@@ -169,62 +186,82 @@ public class TwitterModel {
         }
 
         @Override
-        protected void getRemoteTweets(JsonHttpResponseHandler httpResponseHandler) {
+        protected void fetchRemoteResult(JsonHttpResponseHandler httpResponseHandler) {
             TwitterApplication.getRestClient().getHomeTweets(0 /* sinceId */,
                                                              mNewestId,
                                                              httpResponseHandler);
         }
+
+        @Override
+        protected List<Tweet> parseAndSaveRemoteResult(JSONArray resultJSON) {
+            return Tweet.fromJsonArray(resultJSON);
+        }
     }
 
 
-    private abstract class GetTweetsTask implements Runnable {
-        protected abstract List<Tweet> getLocalTweets();
-        protected abstract boolean shouldSkipRemoteQuery(List<Tweet> localTweetsResult);
-        protected abstract List<Tweet> mergeLocalAndRemoteResults(List<Tweet> localTweets,
-                                                                  List<Tweet> remoteTweets);
+    private abstract class GetQueryTask<T> implements Runnable {
+        protected abstract T getLocalResult();
+        protected abstract boolean shouldSkipRemoteQuery(T localResult);
+        protected abstract void fetchRemoteResult(JsonHttpResponseHandler httpResponseHandler);
+        protected abstract T parseAndSaveRemoteResult(JSONArray resultJSON);
+        protected abstract T mergeLocalAndRemoteResults(T localResult,
+                                                        T remoteResult);
 
-        protected abstract void getRemoteTweets(JsonHttpResponseHandler httpResponseHandler);
-
-        private TweetListQueryDelegate mDelegate;
+        private OnGetFinishDelegate<T> mDelegate;
 
         // Defines a Handler object that's attached to the creating thread. The response
         // task is posted to this handler
         private Handler mResponseHandler;
 
-        public GetTweetsTask(TweetListQueryDelegate delegate) {
+        public GetQueryTask(OnGetFinishDelegate<T> delegate) {
             mDelegate = delegate;
             mResponseHandler = new Handler();
         }
 
         public void run() {
-            final List<Tweet> localTweets = getLocalTweets();
+            final T localTweets = getLocalResult();
 
-            if (shouldSkipRemoteQuery(localTweets)) {
-                postResult(localTweets);
+            boolean isNetworkAvailable = Util.isNetworkAvailable(mContext);
+            if (!isNetworkAvailable || shouldSkipRemoteQuery(localTweets)) {
+                if (!isNetworkAvailable && !shouldSkipRemoteQuery(localTweets)){
+                    postFailure(localTweets, R.string.network_connection_error);
+                } else {
+                    postSuccess(localTweets);
+
+                }
                 return;
             }
 
-            getRemoteTweets(new JsonHttpResponseHandler() {
+            fetchRemoteResult(new JsonHttpResponseHandler() {
                 @Override
                 public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
-                    List<Tweet> mergedResult = mergeLocalAndRemoteResults(localTweets,
-                                                                          Tweet.fromJsonArray(response));
-                    postResult(mergedResult);
+                    T mergedResult = mergeLocalAndRemoteResults(localTweets,
+                                                                parseAndSaveRemoteResult(response));
+                    postSuccess(mergedResult);
                 }
 
                 @Override
                 public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                    generalFailureResponse(errorResponse);
-                    postResult(localTweets);
+                    int errorMessage = generalFailureResponse(errorResponse);
+                    postFailure(localTweets, errorMessage);
                 }
             });
         }
 
-        private void postResult(final List<Tweet> tweets) {
+        private void postSuccess(final T result) {
             mResponseHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    mDelegate.onQueryComplete(tweets);
+                    mDelegate.onQueryComplete(result);
+                }
+            });
+        }
+
+        private void postFailure(final T result, final int errorMessage) {
+            mResponseHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    mDelegate.onIncompleteQuery(result, errorMessage);
                 }
             });
         }
@@ -254,30 +291,29 @@ public class TwitterModel {
                 .execute();
     }
 
-    private void generalFailureResponse(JSONObject errorResponse) {
-        String errorMessage = "General Error";
+    private int generalFailureResponse(JSONObject errorResponse) {
+        int errorMessage = R.string.general_error;
         try {
             JSONArray errors = errorResponse.optJSONArray("errors");
             if (errors != null) {
                 int code = errors.getJSONObject(0).getInt("code");
 
                 if (code == 88) {
-                    errorMessage = "You've reached your rate limit. Check back later.";
+                    errorMessage = R.string.rate_limit_error;
                 } else if (code == 215) {
-                    errorMessage = "Bad Authentication data";
+                    errorMessage = R.string.bad_auth_error;
                 } else {
-                    errorMessage = "Failed to load tweets. Check your network connection.";
+                    errorMessage = R.string.network_connection_error;
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        Toast.makeText(mContext,
-                errorMessage,
-                Toast.LENGTH_LONG).show();
         if (errorResponse != null) {
             Log.e("DEBUG", errorResponse.toString());
         }
+
+        return errorMessage;
     }
 }
