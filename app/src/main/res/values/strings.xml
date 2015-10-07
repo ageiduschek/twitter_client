@@ -18,5 +18,6 @@
     <string name="bad_auth_error">Bad Authentication data</string>
     <string name="network_connection_error">Network Connection Error</string>
     <string name="duplicate_status_error">Cannot post a duplicate status</string>
+    <string name="title_activity_profile">ProfileActivity</string>
 
 </resources>

@@ -1,5 +1,7 @@
 package com.codepath.apps.twitterclient.models;
 
+import android.content.Context;
+
 import com.activeandroid.Model;
 import com.activeandroid.annotation.Column;
 import com.activeandroid.annotation.Table;
@@ -27,6 +29,12 @@ public class Tweet extends Model {
 
     @Column(name = "created_at")
     private long createdAt;
+
+    @Column(name = "mentions_me")
+    private boolean mentionsMe;
+
+    @Column(name = "author_id")
+    private long authorId;
 
 
     public static Comparator<Tweet> sComparator = new Comparator<Tweet>() {
@@ -64,14 +72,16 @@ public class Tweet extends Model {
         super();
     }
 
-    public static Tweet fromJSON(JSONObject json) {
+    public static Tweet fromJSON(Context context, JSONObject json) {
         Tweet tweet = new Tweet();
         try {
             tweet.body = json.getString("text");
             tweet.remoteId = json.getLong("id");
             tweet.user = User.createOrUpdateFromJSON(json.getJSONObject("user"));
             tweet.createdAt = Util.twitterDateToMillseconds(json.getString("created_at"));
-            tweet.save();
+            tweet.mentionsMe = tweetMentionsMe(context, json);
+            JSONObject tweetAuthor = json.getJSONObject("user");
+            tweet.authorId = Long.parseLong(tweetAuthor.getString("id_str"));            tweet.save();
         } catch (JSONException e) {
             e.printStackTrace();
             // Don't crash on parse failure
@@ -81,11 +91,11 @@ public class Tweet extends Model {
         return tweet;
     }
 
-    public static ArrayList<Tweet> fromJsonArray(JSONArray json) {
+    public static ArrayList<Tweet> fromJsonArray(Context context, JSONArray json) {
         ArrayList<Tweet> tweets = new ArrayList<>();
         for (int i = 0; i < json.length(); i++) {
             try {
-                Tweet tweet = Tweet.fromJSON(json.getJSONObject(i));
+                Tweet tweet = Tweet.fromJSON(context, json.getJSONObject(i));
                 if (tweet != null) {
                     tweets.add(tweet);
                 }
@@ -100,4 +110,31 @@ public class Tweet extends Model {
     public static Comparator<Tweet> comparator() {
         return sComparator;
     }
+
+    public static boolean tweetMentionsMe(Context context, JSONObject json) {
+        try {
+            long myUserId = Util.getUserId(context);
+            JSONObject entities = json.getJSONObject("entities");
+            JSONArray mentions = entities.getJSONArray("user_mentions");
+            for (int i = 0; i < mentions.length(); i++) {
+                if (myUserId == mentions.getJSONObject(i).getLong("id")) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+//    public static boolean tweetAuthoredByMe(Context context, JSONObject json) {
+//        try {
+//            long myUserId = Util.getUserId(context);
+//            JSONObject tweetAuthor = json.getJSONObject("user");
+//            long authorId = Long.parseLong(tweetAuthor.getString("id_str"));
+//            return myUserId == authorId;
+//        } catch (JSONException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
 }

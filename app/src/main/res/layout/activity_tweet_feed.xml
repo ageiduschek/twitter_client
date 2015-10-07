@@ -1,19 +1,20 @@
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-                xmlns:tools="http://schemas.android.com/tools"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                tools:context="com.codepath.apps.twitterclient.activities.TweetFeedActivity">
-    <android.support.v4.widget.SwipeRefreshLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        android:id="@+id/swipeContainer"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              xmlns:app="http://schemas.android.com/apk/res-auto"
+              android:orientation="vertical"
+              tools:context="com.codepath.apps.twitterclient.activities.TweetFeedActivity">
+
+    <com.astuetz.PagerSlidingTabStrip
+        android:id="@+id/ptsTimelinePagerHeader"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="48dip"
+        app:pstsShouldExpand="true"
+        />
 
-        <ListView
-            android:id="@+id/lvTweets"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
-
-    </android.support.v4.widget.SwipeRefreshLayout>
-
-</RelativeLayout>
+    <android.support.v4.view.ViewPager
+        android:id="@+id/vpTimelinePager"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+</LinearLayout>

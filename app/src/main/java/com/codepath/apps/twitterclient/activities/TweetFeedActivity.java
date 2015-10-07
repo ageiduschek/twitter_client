@@ -1,105 +1,67 @@
 package com.codepath.apps.twitterclient.activities;
 
+import android.content.Intent;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.view.PagerAdapter;
+import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.ListView;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.astuetz.PagerSlidingTabStrip;
 import com.codepath.apps.twitterclient.R;
-import com.codepath.apps.twitterclient.adapters.TweetsListAdapter;
 import com.codepath.apps.twitterclient.fragments.ComposeTweetDialog;
-import com.codepath.apps.twitterclient.helpers.EndlessScrollListener;
-import com.codepath.apps.twitterclient.helpers.TwitterModel;
-import com.codepath.apps.twitterclient.models.Tweet;
-import java.util.ArrayList;
-import java.util.List;
+import com.codepath.apps.twitterclient.fragments.HomeTimelineFragment;
+import com.codepath.apps.twitterclient.fragments.MentionsTimelineFragment;
+import com.codepath.apps.twitterclient.fragments.TweetsListFragment;
+import com.codepath.apps.twitterclient.helpers.Util;
+
+// What to put in Activity:
+// Removing or adding fragments
+// navigating between fragments
+// handling communication between fragments
 
 public class TweetFeedActivity extends AppCompatActivity implements ComposeTweetDialog.OnComposeTweetActionListener {
-    private TwitterModel mTwitterModel;
-    private TweetsListAdapter mTweetsListAdapter;
-    private SwipeRefreshLayout mSwipeContainer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tweet_feed);
 
-        ListView lvTweets = (ListView) findViewById(R.id.lvTweets);
-        mTweetsListAdapter = new TweetsListAdapter(this, new ArrayList<Tweet>());
-        lvTweets.setAdapter(mTweetsListAdapter);
+        // Get the view pager
+        ViewPager vpPager = (ViewPager) findViewById(R.id.vpTimelinePager);
+        // set the viewpager adapter for the pager
+        PagerAdapter pagerAdapter = new TweetsPagerAdapter(getSupportFragmentManager());
+        vpPager.setAdapter(pagerAdapter);
 
-        lvTweets.setOnScrollListener(new EndlessScrollListener() {
+        PagerSlidingTabStrip tabStrip = (PagerSlidingTabStrip) findViewById(R.id.ptsTimelinePagerHeader);
+        tabStrip.setViewPager(vpPager);
+
+        // Attach the page change listener inside the activity
+        vpPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+
             @Override
-            public boolean onLoadMore(int page, int totalItemsCount) {
-                extendTimeline();
-                return true; // ONLY if more data is actually being loaded; false otherwise.
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+
+            }
+
+            // This method will be invoked when a new page becomes selected.
+            @Override
+            public void onPageSelected(int position) {
+                refreshCurrentListFragment();
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {
+
             }
         });
-
-        mTwitterModel = new TwitterModel(this);
-
-        mSwipeContainer = (SwipeRefreshLayout) findViewById(R.id.swipeContainer);
-
-        // Setup refresh listener which triggers new data loading
-        mSwipeContainer.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                refreshTimeline();
-            }
-        });
-
-        // Configure the refreshing colors
-        mSwipeContainer.setColorSchemeResources(R.color.twitter_dark_blue,
-                R.color.twitter_logo_blue,
-                R.color.twitter_verified_blue,
-                R.color.twitter_background_blue);
-
-        // Load initial batch
-        refreshTimeline();
     }
-
-    private void refreshTimeline() {
-        mTwitterModel.getNewHomeTweets(getLoadTweetsDelegate(true /*isRefresh*/));
-    }
-
-    private void extendTimeline() {
-        mTwitterModel.getHomeTweetsBefore(mTweetsListAdapter.getLastKnownId(),
-                                          getLoadTweetsDelegate(false /*isRefresh*/));
-    }
-
-    private TwitterModel.OnGetFinishDelegate<List<Tweet>> getLoadTweetsDelegate(final boolean isRefresh) {
-        return new TwitterModel.OnGetFinishDelegate<List<Tweet>>() {
-            @Override
-            public void onQueryComplete(List<Tweet> result) {
-                onFinishHelper(result, 0);
-            }
-
-            @Override
-            public void onIncompleteQuery(List<Tweet> partialResult, int errorMessage) {
-                onFinishHelper(partialResult, errorMessage);
-            }
-
-            public void onFinishHelper(List<Tweet> result, int errorMessage) {
-                if (result != null) {
-                    if (isRefresh) {
-                        mTweetsListAdapter.clear();
-                    }
-
-                    mTweetsListAdapter.addAll(result);
-                }
-                mSwipeContainer.setRefreshing(false);
-
-                if (errorMessage != 0) {
-                    Toast.makeText(getApplicationContext(), errorMessage, Toast.LENGTH_SHORT).show();
-                }
-            }
-        };
-    }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -119,12 +81,23 @@ public class TweetFeedActivity extends AppCompatActivity implements ComposeTweet
         if (id == R.id.action_compose_tweet) {
             showComposeDialog();
             return true;
+        } else if (id == R.id.action_view_profile) {
+            showProfileView();
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
 
     private ComposeTweetDialog mComposeDialog;
+
+    private void showProfileView() {
+        long userId = Util.getUserId(this);
+
+        Intent i = new Intent(this, ProfileActivity.class);
+        i.putExtra(ProfileActivity.USER_ID_KEY, userId);
+        startActivity(i);
+    }
 
     private void showComposeDialog() {
         FragmentManager fm = getSupportFragmentManager();
@@ -138,10 +111,55 @@ public class TweetFeedActivity extends AppCompatActivity implements ComposeTweet
             if (mComposeDialog != null) {
                 mComposeDialog.dismiss();
             }
-            refreshTimeline();
+            refreshCurrentListFragment();
         } else {
             Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT).show();
         }
 
+    }
+
+
+    public class TweetsPagerAdapter extends FragmentPagerAdapter {
+        private String tabTitles[] = {"Home", "Mentions"};
+
+        public TweetsPagerAdapter(FragmentManager fm) {
+            super(fm);
+        }
+
+        @Override
+        public Fragment getItem(int position) {
+            switch (position) {
+                case 0: return HomeTimelineFragment.newInstance();
+                case 1: return MentionsTimelineFragment.newInstance();
+                default:
+                    throw new RuntimeException("Unknown fragment index");
+            }
+        }
+
+
+        @Override
+        public void destroyItem(ViewGroup container, int position, Object object) {
+            super.destroyItem(container, position, object);
+        }
+
+        @Override
+        public CharSequence getPageTitle(int position) {
+            return tabTitles[position];
+        }
+
+        @Override
+        public int getCount() {
+            return tabTitles.length;
+        }
+    }
+
+
+    public void refreshCurrentListFragment() {
+        ViewPager vpPager = (ViewPager) findViewById(R.id.vpTimelinePager);
+        Fragment page = getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.vpTimelinePager + ":" + vpPager.getCurrentItem());
+        // based on the current position you can then cast the page to the correct
+        // class and call the method:
+
+        ((TweetsListFragment)page).refreshTimeline();
     }
 }

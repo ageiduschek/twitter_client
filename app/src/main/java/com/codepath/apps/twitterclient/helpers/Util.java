@@ -1,11 +1,18 @@
 package com.codepath.apps.twitterclient.helpers;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
+
+import com.codepath.apps.twitterclient.models.User;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -53,5 +60,25 @@ public final class Util {
                 = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
         return activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting();
+    }
+
+    private static String USER_ID_KEY = "account_user_id";
+    public static long getUserId(Context context) {
+        SharedPreferences pref =
+                PreferenceManager.getDefaultSharedPreferences(context);
+        long id = pref.getLong(USER_ID_KEY, -1);
+        if (id == -1) {
+            throw new RuntimeException("User id does not exist in SharedPreferences");
+        }
+        return id;
+    }
+
+    public static void setLoggedInUserInfo(Context context, JSONObject userJSON) {
+        SharedPreferences pref =
+                PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor edit = pref.edit();
+        User user = User.createOrUpdateFromJSON(userJSON);
+        edit.putLong(USER_ID_KEY, user.getRemoteId());
+        edit.commit();
     }
 }

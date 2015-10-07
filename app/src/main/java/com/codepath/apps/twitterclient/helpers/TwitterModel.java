@@ -4,8 +4,8 @@ import android.content.Context;
 import android.os.HandlerThread;
 import android.os.Handler;
 import android.util.Log;
-import android.widget.Toast;
 
+import com.activeandroid.query.From;
 import com.activeandroid.query.Select;
 import com.codepath.apps.twitterclient.R;
 import com.codepath.apps.twitterclient.TwitterApplication;
@@ -81,17 +81,58 @@ public class TwitterModel {
             throw new RuntimeException("Invalid newestId");
         }
 
-        mIOHandler.post(new GetTweetsBeforeTask(newestId, delegate));
+        mIOHandler.post(new GetTweetsBeforeTask(newestId, delegate, new HomeTimelineQueryAdapter()));
     }
 
-    public void getNewHomeTweets(final OnGetFinishDelegate<List<Tweet>> delegate) {
-        mIOHandler.post(new GetNewTweetsTask(delegate));
+    public void getNewestHomeTweets(final OnGetFinishDelegate<List<Tweet>> delegate) {
+        mIOHandler.post(new GetNewTweetsTask(delegate, new HomeTimelineQueryAdapter()));
+    }
+
+
+    /**
+     *
+     * @param newestId Queries for results with an ID less than (that is, older than)
+     *                 to the specified ID.
+     * @param delegate handles the http response
+     */
+    public void getMentionsBefore(long newestId,
+                                  final OnGetFinishDelegate<List<Tweet>> delegate) {
+        if (newestId <= 0) {
+            throw new RuntimeException("Invalid newestId");
+        }
+
+        mIOHandler.post(new GetTweetsBeforeTask(newestId, delegate, new MentionsQueryAdapter()));
+    }
+
+    public void getNewestMentions(final OnGetFinishDelegate<List<Tweet>> delegate) {
+        mIOHandler.post(new GetNewTweetsTask(delegate, new MentionsQueryAdapter()));
+    }
+
+
+    /**
+     *
+     * @param newestId Queries for results with an ID less than (that is, older than)
+     *                 to the specified ID.
+     * @param delegate handles the http response
+     */
+    public void getUserTweetsBefore(long userId,
+                                    long newestId,
+                                    final OnGetFinishDelegate<List<Tweet>> delegate) {
+        if (newestId <= 0) {
+            throw new RuntimeException("Invalid newestId");
+        }
+
+        mIOHandler.post(new GetTweetsBeforeTask(newestId, delegate, new UserTimelineQueryAdapter(userId)));
+    }
+
+    public void getNewestUserTweets(long userId,
+                                    final OnGetFinishDelegate<List<Tweet>> delegate) {
+        mIOHandler.post(new GetNewTweetsTask(delegate, new UserTimelineQueryAdapter(userId)));
     }
 
 
     public void postTweet(final String tweet, final OnPostFinishDelegate delegate) {
         if (!Util.isNetworkAvailable(mContext)) {
-            Log.d("ASDF", "HERE 1");
             delegate.onQueryComplete(R.string.network_connection_error);
             return;
         }
@@ -99,29 +140,81 @@ public class TwitterModel {
         TwitterApplication.getRestClient().postTweet(tweet, new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                Log.d("ASDF", "HERE 2");
                 delegate.onQueryComplete(0);
             }
 
             @Override
             public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
                 int errorMessage = generalFailureResponse(errorResponse);
-                Log.d("ASDF", "HERE 3");
                 delegate.onQueryComplete(errorMessage);
             }
         });
     }
 
+    private interface QueryTypeAdapter {
+        String getFilterClause();
+        void fetchRemoteResult(long sinceId, long newestId, JsonHttpResponseHandler httpResponseHandler);
+    }
+
+    private class HomeTimelineQueryAdapter implements QueryTypeAdapter {
+        @Override
+        public String getFilterClause() {
+            return "";
+        }
+
+        @Override
+        public void fetchRemoteResult(long sinceId, long newestId, JsonHttpResponseHandler httpResponseHandler) {
+            TwitterApplication.getRestClient().getHomeTweets(sinceId,
+                                                             newestId,
+                                                             httpResponseHandler);
+        }
+    }
+
+    private class MentionsQueryAdapter implements QueryTypeAdapter {
+        @Override
+        public String getFilterClause() {
+            return "mentions_me = 1";
+        }
+
+        @Override
+        public void fetchRemoteResult(long sinceId, long newestId, JsonHttpResponseHandler httpResponseHandler) {
+            TwitterApplication.getRestClient().getMentionsTimeline(sinceId, newestId, httpResponseHandler);
+        }
+    }
+
+    private class UserTimelineQueryAdapter implements QueryTypeAdapter {
+        private final long mUserId;
+
+        public UserTimelineQueryAdapter(long userId) {
+            mUserId = userId;
+        }
+
+        @Override
+        public String getFilterClause() {
+            return "author_id = " + mUserId;
+        }
+
+        @Override
+        public void fetchRemoteResult(long sinceId, long newestId, JsonHttpResponseHandler httpResponseHandler) {
+            TwitterApplication.getRestClient().getUserTimeline(sinceId, newestId, httpResponseHandler);
+        }
+    }
+
 
     private class GetNewTweetsTask extends GetQueryTask<List<Tweet>> {
 
-        public GetNewTweetsTask(OnGetFinishDelegate<List<Tweet>> delegate) {
+        private final QueryTypeAdapter mQueryTypeAdapter;
+
+        public GetNewTweetsTask(OnGetFinishDelegate<List<Tweet>> delegate,
+                                QueryTypeAdapter queryTypeAdapter) {
             super(delegate);
+            mQueryTypeAdapter = queryTypeAdapter;
         }
 
         @Override
         protected List<Tweet> getLocalResult() {
-            return getLocalTweetsPage(0 /* newestId */, PAGE_SIZE);
+            return getLocalTweetsPage(0 /* newestId */, PAGE_SIZE,
+                                      mQueryTypeAdapter.getFilterClause());
         }
 
         @Override
@@ -149,28 +242,30 @@ public class TwitterModel {
 
         @Override
         protected void fetchRemoteResult(JsonHttpResponseHandler httpResponseHandler) {
-            TwitterApplication.getRestClient().getHomeTweets(getMostRecentTweetId(),
-                                                             0,
-                                                             httpResponseHandler);
+            mQueryTypeAdapter.fetchRemoteResult(getMostRecentTweetId(mQueryTypeAdapter.getFilterClause()),
+                                                0,
+                                                httpResponseHandler);
         }
 
         @Override
-        protected List<Tweet> parseAndSaveRemoteResult(JSONArray resultJSON) {
-            return Tweet.fromJsonArray(resultJSON);
+        protected List<Tweet> parseAndSaveRemoteResult(Context context, JSONArray resultJSON) {
+            return Tweet.fromJsonArray(context, resultJSON);
         }
     }
 
     private class GetTweetsBeforeTask extends GetQueryTask<List<Tweet>> {
         // Return tweets posted before this tweet
         private long mNewestId;
+        private final QueryTypeAdapter mQueryTypeAdapter;
 
-        public GetTweetsBeforeTask(long newestId, OnGetFinishDelegate<List<Tweet>> delegate) {
+        public GetTweetsBeforeTask(long newestId, OnGetFinishDelegate<List<Tweet>> delegate, QueryTypeAdapter queryTypeAdapter) {
             super(delegate);
             mNewestId = newestId;
+            mQueryTypeAdapter = queryTypeAdapter;
         }
         @Override
         protected List<Tweet> getLocalResult() {
-            return getLocalTweetsPage(mNewestId, PAGE_SIZE);
+            return getLocalTweetsPage(mNewestId, PAGE_SIZE, mQueryTypeAdapter.getFilterClause());
         }
 
         @Override
@@ -190,23 +285,22 @@ public class TwitterModel {
 
         @Override
         protected void fetchRemoteResult(JsonHttpResponseHandler httpResponseHandler) {
-            TwitterApplication.getRestClient().getHomeTweets(0 /* sinceId */,
-                                                             mNewestId,
-                                                             httpResponseHandler);
+            mQueryTypeAdapter.fetchRemoteResult(0 /* sinceId */,
+                                                mNewestId,
+                                                httpResponseHandler);
         }
 
         @Override
-        protected List<Tweet> parseAndSaveRemoteResult(JSONArray resultJSON) {
-            return Tweet.fromJsonArray(resultJSON);
+        protected List<Tweet> parseAndSaveRemoteResult(Context context, JSONArray resultJSON) {
+            return Tweet.fromJsonArray(context, resultJSON);
         }
     }
-
 
     private abstract class GetQueryTask<T> implements Runnable {
         protected abstract T getLocalResult();
         protected abstract boolean shouldSkipRemoteQuery(T localResult);
         protected abstract void fetchRemoteResult(JsonHttpResponseHandler httpResponseHandler);
-        protected abstract T parseAndSaveRemoteResult(JSONArray resultJSON);
+        protected abstract T parseAndSaveRemoteResult(Context context, JSONArray resultJSON);
         protected abstract T mergeLocalAndRemoteResults(T localResult,
                                                         T remoteResult);
 
@@ -239,7 +333,7 @@ public class TwitterModel {
                 @Override
                 public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
                     T mergedResult = mergeLocalAndRemoteResults(localTweets,
-                                                                parseAndSaveRemoteResult(response));
+                                                                parseAndSaveRemoteResult(mContext, response));
                     postSuccess(mergedResult);
                 }
 
@@ -270,10 +364,11 @@ public class TwitterModel {
         }
     }
 
-    private long getMostRecentTweetId() {
+    private long getMostRecentTweetId(String filterClause) {
         Util.assertNotUIThread();
         List<Tweet> result = new Select()
                                 .from(Tweet.class)
+                                .where(filterClause)
                                 .orderBy("remote_id DESC")
                                 .limit(1)
                                 .execute();
@@ -284,12 +379,18 @@ public class TwitterModel {
         return 0;
     }
 
-    private List<Tweet> getLocalTweetsPage(long newestId, int limit) {
+    private List<Tweet> getLocalTweetsPage(long newestId, int limit, String filterClause) {
         Util.assertNotUIThread();
-        return new Select()
+
+        From partial = new Select()
                 .from(Tweet.class)
-                .where(newestId > 0 ? "remote_id < " + newestId : "")
-                .orderBy("remote_id DESC")
+                .where(newestId > 0 ? "remote_id < " + newestId : "");
+
+        if (!filterClause.isEmpty()) {
+            partial = partial.where(filterClause);
+        }
+
+        return partial.orderBy("remote_id DESC")
                 .limit(limit)
                 .execute();
     }

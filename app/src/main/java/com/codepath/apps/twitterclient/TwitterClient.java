@@ -43,6 +43,22 @@ public class TwitterClient extends OAuthBaseClient {
 
 
 	private static final int RESULTS_PER_PAGE = 100;
+    private static final String HOME_TIMELINE_NAME = "home_timeline";
+    private static final String MENTIONS_TIMELINE_NAME = "mentions_timeline";
+    private static final String USER_TIMELINE_NAME = "user_timeline";
+
+
+	public void getHomeTweets(long sinceId, long maxId, AsyncHttpResponseHandler handler) {
+        getTimeLine(HOME_TIMELINE_NAME, sinceId, maxId, null /*user_id*/, handler);
+    }
+
+    public void getMentionsTimeline(long sinceId, long maxId, AsyncHttpResponseHandler handler) {
+        getTimeLine(MENTIONS_TIMELINE_NAME, sinceId, maxId, null /*user_id*/, handler);
+    }
+
+    public void getUserTimeline(long sinceId, long maxId, AsyncHttpResponseHandler handler) {
+        getTimeLine(USER_TIMELINE_NAME, sinceId, maxId,  null /*user_id*/, handler);
+    }
 
     /**
      *
@@ -50,14 +66,14 @@ public class TwitterClient extends OAuthBaseClient {
      *              less than (that is, older than) to the specified ID.
      * @param handler handles the http response
      */
-	public void getHomeTweets(long sinceId, long maxId, AsyncHttpResponseHandler handler) {
-		if (sinceId > 0 && maxId > 0) {
+    private void getTimeLine(String timelineName, long sinceId, long maxId, Long userId, AsyncHttpResponseHandler handler) {
+        if (sinceId > 0 && maxId > 0) {
             throw new RuntimeException("Can't define since_id and max_id simultaneously");
         }
 
-        String apiUrl = getApiUrl("/statuses/home_timeline.json");
-		RequestParams params = new RequestParams();
-		params.put("count", Integer.toString(RESULTS_PER_PAGE));
+        String apiUrl = getApiUrl("/statuses/" + timelineName + ".json");
+        RequestParams params = new RequestParams();
+        params.put("count", Integer.toString(RESULTS_PER_PAGE));
 
         if (sinceId > 0) {
             params.put("since_id", Long.toString(sinceId));
@@ -66,7 +82,14 @@ public class TwitterClient extends OAuthBaseClient {
         if (maxId > 0) {
             params.put("max_id", Long.toString(maxId + 1));
         }
-		getClient().get(apiUrl, params, handler);
+
+        if (userId != null) {
+            params.put("user_id", Long.toString(userId));
+        }
+
+        // Include mentions
+        params.put("include_entities", "true");
+        getClient().get(apiUrl, params, handler);
     }
 
     public void postTweet(String tweet, AsyncHttpResponseHandler handler) {
@@ -74,5 +97,11 @@ public class TwitterClient extends OAuthBaseClient {
         RequestParams params = new RequestParams();
         params.put("status", tweet);
         getClient().post(apiUrl, params, handler);
+    }
+
+    public void verifyCredentials(AsyncHttpResponseHandler handler) {
+        String apiUrl = getApiUrl("/account/verify_credentials.json");
+        RequestParams params = new RequestParams();
+        getClient().get(apiUrl, params, handler);
     }
 }

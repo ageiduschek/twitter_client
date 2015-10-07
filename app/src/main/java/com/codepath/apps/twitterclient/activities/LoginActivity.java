@@ -1,5 +1,6 @@
 package com.codepath.apps.twitterclient.activities;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar;
@@ -8,7 +9,12 @@ import android.view.View;
 
 import com.codepath.apps.twitterclient.R;
 import com.codepath.apps.twitterclient.TwitterClient;
+import com.codepath.apps.twitterclient.helpers.Util;
 import com.codepath.oauth.OAuthLoginActionBarActivity;
+import com.loopj.android.http.JsonHttpResponseHandler;
+
+import org.apache.http.Header;
+import org.json.JSONObject;
 
 public class LoginActivity extends OAuthLoginActionBarActivity<TwitterClient> {
 
@@ -34,6 +40,13 @@ public class LoginActivity extends OAuthLoginActionBarActivity<TwitterClient> {
 	// i.e Display application "homepage"
 	@Override
 	public void onLoginSuccess() {
+        getClient().verifyCredentials(new JsonHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                Util.setLoggedInUserInfo(LoginActivity.this, response);
+            }
+        });
+
 		 Intent i = new Intent(this, TweetFeedActivity.class);
 		 startActivity(i);
 	}
