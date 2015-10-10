@@ -15,6 +15,7 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import com.codepath.apps.twitterclient.R;
+import com.codepath.apps.twitterclient.TwitterApplication;
 import com.codepath.apps.twitterclient.helpers.TwitterModel;
 
 /**
@@ -95,7 +96,7 @@ public class ComposeTweetDialog extends DialogFragment {
         super.onAttach(activity);
         try {
             mListener = (OnComposeTweetActionListener) activity;
-            mTwitterModel = new TwitterModel(activity);
+            mTwitterModel = ((TwitterApplication)activity.getApplication()).getTwitterModel();
         } catch (ClassCastException e) {
             throw new ClassCastException(activity.toString()
                                                  + " must implement OnFragmentInteractionListener");

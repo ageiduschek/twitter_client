@@ -4,6 +4,7 @@ import org.scribe.builder.api.Api;
 import org.scribe.builder.api.TwitterApi;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.codepath.oauth.OAuthBaseClient;
 import com.loopj.android.http.AsyncHttpResponseHandler;
@@ -22,6 +23,8 @@ import com.loopj.android.http.RequestParams;
  * 
  */
 public class TwitterClient extends OAuthBaseClient {
+    private static final String TAG = TwitterClient.class.getSimpleName();
+
 	public static final Class<? extends Api> REST_API_CLASS = TwitterApi.class;
 	public static final String REST_URL = "https://api.twitter.com/1.1/";
 	public static final String REST_CONSUMER_KEY = "nDjrOBKfwhF2fFeZLqMeNKeHH";
@@ -56,8 +59,8 @@ public class TwitterClient extends OAuthBaseClient {
         getTimeLine(MENTIONS_TIMELINE_NAME, sinceId, maxId, null /*user_id*/, handler);
     }
 
-    public void getUserTimeline(long sinceId, long maxId, AsyncHttpResponseHandler handler) {
-        getTimeLine(USER_TIMELINE_NAME, sinceId, maxId,  null /*user_id*/, handler);
+    public void getUserTimeline(long userId, long sinceId, long maxId, AsyncHttpResponseHandler handler) {
+        getTimeLine(USER_TIMELINE_NAME, sinceId, maxId,  userId, handler);
     }
 
     /**
@@ -88,7 +91,13 @@ public class TwitterClient extends OAuthBaseClient {
         }
 
         // Include mentions
-        params.put("include_entities", "true");
+        if (userId == null) {
+            params.put("include_entities", "true");
+        }
+
+        Log.w(TAG, "ASDF MAKING A NETWORK CALL TO GET TWEETS");
+        Log.w(TAG, "ASDF: " + apiUrl);
+        Log.w(TAG, "ASDF: params: " + params.toString());
         getClient().get(apiUrl, params, handler);
     }
 

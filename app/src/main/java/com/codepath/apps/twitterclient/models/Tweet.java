@@ -81,7 +81,8 @@ public class Tweet extends Model {
             tweet.createdAt = Util.twitterDateToMillseconds(json.getString("created_at"));
             tweet.mentionsMe = tweetMentionsMe(context, json);
             JSONObject tweetAuthor = json.getJSONObject("user");
-            tweet.authorId = Long.parseLong(tweetAuthor.getString("id_str"));            tweet.save();
+            tweet.authorId = Long.parseLong(tweetAuthor.getString("id_str"));
+            tweet.save();
         } catch (JSONException e) {
             e.printStackTrace();
             // Don't crash on parse failure
@@ -126,15 +127,4 @@ public class Tweet extends Model {
             throw new RuntimeException(e);
         }
     }
-
-//    public static boolean tweetAuthoredByMe(Context context, JSONObject json) {
-//        try {
-//            long myUserId = Util.getUserId(context);
-//            JSONObject tweetAuthor = json.getJSONObject("user");
-//            long authorId = Long.parseLong(tweetAuthor.getString("id_str"));
-//            return myUserId == authorId;
-//        } catch (JSONException e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
 }

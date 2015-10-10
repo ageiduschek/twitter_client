@@ -1,6 +1,9 @@
 package com.codepath.apps.twitterclient.adapters;
 
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.media.Image;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,6 +13,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.codepath.apps.twitterclient.R;
+import com.codepath.apps.twitterclient.activities.ProfileActivity;
 import com.codepath.apps.twitterclient.helpers.Util;
 import com.codepath.apps.twitterclient.models.Tweet;
 import com.squareup.picasso.Picasso;
@@ -26,7 +30,18 @@ public class TweetsListAdapter extends ArrayAdapter<Tweet> {
         TextView tvScreenName;
         TextView tvTweetBody;
         TextView tvCreatedAt;
+        long userId;
     }
+
+    private ImageView.OnClickListener onProfileClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            long userId = ((TweetSubViews)v.getTag()).userId;
+            Intent i = new Intent(getContext(), ProfileActivity.class);
+            i.putExtra(ProfileActivity.USER_ID_KEY, userId);
+            getContext().startActivity(i);
+        }
+    };
 
     public TweetsListAdapter(Context context, List<Tweet> objects) {
         super(context, android.R.layout.simple_list_item_1, objects);
@@ -54,10 +69,11 @@ public class TweetsListAdapter extends ArrayAdapter<Tweet> {
         subViews.tvName.setText(tweet.getUser().getName());
         subViews.tvScreenName.setText("@" + tweet.getUser().getScreenName());
         subViews.tvCreatedAt.setText(Util.getRelativeTimestamp(tweet.getCreatedAt()));
+        subViews.userId = tweet.getUser().getRemoteId();
 
         Picasso.with(getContext()).load(tweet.getUser().getProfileImageUrl()).into(subViews.ivProfileImage);
 
-
+        convertView.setOnClickListener(onProfileClickListener);
 
         return convertView;
     }
@@ -68,5 +84,15 @@ public class TweetsListAdapter extends ArrayAdapter<Tweet> {
         }
 
         return getItem(getCount()-1).getRemoteId();
+    }
+
+    @Override
+    public String toString() {
+        String result = "[";
+        for (int i = 0; i < getCount(); i++) {
+            result += getItem(i).getRemoteId() + ", ";
+        }
+        result += "]";
+        return result;
     }
 }

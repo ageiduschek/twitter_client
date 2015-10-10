@@ -1,18 +1,15 @@
 package com.codepath.apps.twitterclient.activities;
 
-import android.media.Image;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 import com.codepath.apps.twitterclient.R;
+import com.codepath.apps.twitterclient.fragments.ProfileHeaderFragment;
 import com.codepath.apps.twitterclient.fragments.UserTimelineFragment;
 import com.codepath.apps.twitterclient.models.User;
-import com.squareup.picasso.Picasso;
 
 public class ProfileActivity extends AppCompatActivity {
 
@@ -30,9 +27,11 @@ public class ProfileActivity extends AppCompatActivity {
 
         if (savedInstanceState == null) {
             UserTimelineFragment userTimelineFragment = UserTimelineFragment.newInstance(userId);
+            ProfileHeaderFragment profileHeaderFragment = ProfileHeaderFragment.newInstance(userId);
 
             // Display user fragment within
             FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+            ft.replace(R.id.flProfileHeaderContainer, profileHeaderFragment);
             ft.replace(R.id.flTimelineContainer, userTimelineFragment);
             ft.commit();
         }
@@ -40,25 +39,6 @@ public class ProfileActivity extends AppCompatActivity {
         if(getSupportActionBar() != null) {
             getSupportActionBar().setTitle(user.getScreenName());
         }
-
-        popupateUserProfileHeader(user);
-    }
-
-    private void popupateUserProfileHeader(User user) {
-        ImageView ivProfileImage = (ImageView) findViewById(R.id.ivProfileImage);
-        TextView tvName = (TextView) findViewById(R.id.tvName);
-        TextView tvScreenName = (TextView) findViewById(R.id.tvScreenName);
-        TextView tvTagline = (TextView) findViewById(R.id.tvTagline);
-        TextView tvNumFollowers = (TextView) findViewById(R.id.tvNumFollowers);
-        TextView tvNumFollowing = (TextView) findViewById(R.id.tvNumFollowing);
-
-        tvName.setText(user.getName());
-        tvScreenName.setText("@" + user.getScreenName());
-        tvTagline.setText(user.getTagLine());
-        tvNumFollowers.setText(user.getNumFollowers() + " followers");
-        tvNumFollowing.setText(user.getNumFollowing() + " following");
-
-        Picasso.with(this).load(user.getProfileImageUrl()).into(ivProfileImage);
     }
 
     @Override

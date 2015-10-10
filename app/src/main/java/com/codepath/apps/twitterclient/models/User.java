@@ -92,6 +92,7 @@ public class User extends Model {
     }
 
     public static User lookupWithId(long id) {
+        Log.d("ASDF", "lookupWithId: " + id);
         return new Select()
                 .from(User.class)
                 .where("remote_id = " + id)

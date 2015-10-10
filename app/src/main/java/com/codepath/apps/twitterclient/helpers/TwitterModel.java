@@ -9,6 +9,7 @@ import com.activeandroid.query.From;
 import com.activeandroid.query.Select;
 import com.codepath.apps.twitterclient.R;
 import com.codepath.apps.twitterclient.TwitterApplication;
+import com.codepath.apps.twitterclient.TwitterClient;
 import com.codepath.apps.twitterclient.models.Tweet;
 import com.loopj.android.http.JsonHttpResponseHandler;
 
@@ -23,6 +24,7 @@ import java.util.List;
  * Layer that retrieves data from database or server, as appropriate
  */
 public class TwitterModel {
+
 
     public interface OnPostFinishDelegate {
         /**
@@ -53,6 +55,12 @@ public class TwitterModel {
 
     private final Context mContext;
     private final Handler mIOHandler;
+    private boolean mVerifiedCredentials = false;
+    private ArrayList<Runnable> mTasksPendingCredentials;
+
+    public static TwitterClient getRestClient(Context c) {
+        return (TwitterClient) TwitterClient.getInstance(TwitterClient.class, c);
+    }
 
 
     public TwitterModel(Context context) {
@@ -65,9 +73,26 @@ public class TwitterModel {
         mIOHandlerThread.start();
         // Create a handler attached to the HandlerThread's Looper
         mIOHandler = new Handler(mIOHandlerThread.getLooper());
+
+        mTasksPendingCredentials = new ArrayList<>();
     }
 
     public static int PAGE_SIZE = 25;
+
+
+    public void verifyCredentials() {
+        getRestClient(mContext).verifyCredentials(new JsonHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                Log.d("ASDF", "GOT VERIFIED CREDENTIALS");
+                Util.setLoggedInUserInfo(mContext, response);
+                mVerifiedCredentials = true;
+                for (Runnable task : mTasksPendingCredentials) {
+                    mIOHandler.post(task);
+                }
+            }
+        });
+    }
 
     /**
      *
@@ -81,11 +106,11 @@ public class TwitterModel {
             throw new RuntimeException("Invalid newestId");
         }
 
-        mIOHandler.post(new GetTweetsBeforeTask(newestId, delegate, new HomeTimelineQueryAdapter()));
+        postWhenVerified(new GetTweetsBeforeTask(newestId, delegate, new HomeTimelineQueryAdapter()));
     }
 
     public void getNewestHomeTweets(final OnGetFinishDelegate<List<Tweet>> delegate) {
-        mIOHandler.post(new GetNewTweetsTask(delegate, new HomeTimelineQueryAdapter()));
+        postWhenVerified(new GetNewTweetsTask(delegate, new HomeTimelineQueryAdapter()));
     }
 
 
@@ -101,11 +126,11 @@ public class TwitterModel {
             throw new RuntimeException("Invalid newestId");
         }
 
-        mIOHandler.post(new GetTweetsBeforeTask(newestId, delegate, new MentionsQueryAdapter()));
+        postWhenVerified(new GetTweetsBeforeTask(newestId, delegate, new MentionsQueryAdapter()));
     }
 
     public void getNewestMentions(final OnGetFinishDelegate<List<Tweet>> delegate) {
-        mIOHandler.post(new GetNewTweetsTask(delegate, new MentionsQueryAdapter()));
+        postWhenVerified(new GetNewTweetsTask(delegate, new MentionsQueryAdapter()));
     }
 
 
@@ -122,14 +147,14 @@ public class TwitterModel {
             throw new RuntimeException("Invalid newestId");
         }
 
-        mIOHandler.post(new GetTweetsBeforeTask(newestId, delegate, new UserTimelineQueryAdapter(userId)));
+        Log.d("ASDF", "GET USER TWEETS BEFORE");
+        postWhenVerified(new GetTweetsBeforeTask(newestId, delegate, new UserTimelineQueryAdapter(userId)));
     }
 
     public void getNewestUserTweets(long userId,
                                     final OnGetFinishDelegate<List<Tweet>> delegate) {
-        mIOHandler.post(new GetNewTweetsTask(delegate, new UserTimelineQueryAdapter(userId)));
+        postWhenVerified(new GetNewTweetsTask(delegate, new UserTimelineQueryAdapter(userId)));
     }
-
 
     public void postTweet(final String tweet, final OnPostFinishDelegate delegate) {
         if (!Util.isNetworkAvailable(mContext)) {
@@ -137,7 +162,7 @@ public class TwitterModel {
             return;
         }
 
-        TwitterApplication.getRestClient().postTweet(tweet, new JsonHttpResponseHandler() {
+        TwitterModel.getRestClient(mContext).postTweet(tweet, new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
                 delegate.onQueryComplete(0);
@@ -149,6 +174,14 @@ public class TwitterModel {
                 delegate.onQueryComplete(errorMessage);
             }
         });
+    }
+
+    private void postWhenVerified(Runnable task) {
+        if (mVerifiedCredentials) {
+            mIOHandler.post(task);
+        } else {
+            mTasksPendingCredentials.add(task);
+        }
     }
 
     private interface QueryTypeAdapter {
@@ -164,7 +197,7 @@ public class TwitterModel {
 
         @Override
         public void fetchRemoteResult(long sinceId, long newestId, JsonHttpResponseHandler httpResponseHandler) {
-            TwitterApplication.getRestClient().getHomeTweets(sinceId,
+            TwitterModel.getRestClient(mContext).getHomeTweets(sinceId,
                                                              newestId,
                                                              httpResponseHandler);
         }
@@ -178,7 +211,7 @@ public class TwitterModel {
 
         @Override
         public void fetchRemoteResult(long sinceId, long newestId, JsonHttpResponseHandler httpResponseHandler) {
-            TwitterApplication.getRestClient().getMentionsTimeline(sinceId, newestId, httpResponseHandler);
+            TwitterModel.getRestClient(mContext).getMentionsTimeline(sinceId, newestId, httpResponseHandler);
         }
     }
 
@@ -196,7 +229,8 @@ public class TwitterModel {
 
         @Override
         public void fetchRemoteResult(long sinceId, long newestId, JsonHttpResponseHandler httpResponseHandler) {
-            TwitterApplication.getRestClient().getUserTimeline(sinceId, newestId, httpResponseHandler);
+            Log.d("ASDF", "USER TIMELINE- GET REMOTE RESULT");
+            TwitterModel.getRestClient(mContext).getUserTimeline(mUserId, sinceId, newestId, httpResponseHandler);
         }
     }
 
@@ -270,13 +304,13 @@ public class TwitterModel {
 
         @Override
         protected boolean shouldSkipRemoteQuery(List<Tweet> localTweetsResult) {
-            return localTweetsResult.size() == PAGE_SIZE;
+            return localTweetsResult.size() >= PAGE_SIZE;
         }
 
         @Override
         protected List<Tweet> mergeLocalAndRemoteResults(List<Tweet> localTweets,
                                                          List<Tweet> remoteTweets) {
-            int tweetsNeeded = localTweets.size() - PAGE_SIZE;
+            int tweetsNeeded = PAGE_SIZE - localTweets.size();
             for (int i = 0; i < Math.min(tweetsNeeded, remoteTweets.size()); i++) {
                 localTweets.add(remoteTweets.get(i));
             }
@@ -334,11 +368,14 @@ public class TwitterModel {
                 public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
                     T mergedResult = mergeLocalAndRemoteResults(localTweets,
                                                                 parseAndSaveRemoteResult(mContext, response));
+                    Log.d("ASDF", "HTTP QUERY SUCCESS. LENGTH: " + response.length());
+                    Log.d("ASDF", "MERGED RESULT LENGTH: " + ((List<Tweet>)mergedResult).size());
                     postSuccess(mergedResult);
                 }
 
                 @Override
                 public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                    Log.d("ASDF", "HTTP QUERY FAILURE");
                     int errorMessage = generalFailureResponse(errorResponse);
                     postFailure(localTweets, errorMessage);
                 }

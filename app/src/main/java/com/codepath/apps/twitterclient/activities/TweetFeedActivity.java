@@ -4,10 +4,10 @@ import android.content.Intent;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
-import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewGroup;
@@ -15,6 +15,7 @@ import android.widget.Toast;
 
 import com.astuetz.PagerSlidingTabStrip;
 import com.codepath.apps.twitterclient.R;
+import com.codepath.apps.twitterclient.adapters.SmartFragmentStatePagerAdapter;
 import com.codepath.apps.twitterclient.fragments.ComposeTweetDialog;
 import com.codepath.apps.twitterclient.fragments.HomeTimelineFragment;
 import com.codepath.apps.twitterclient.fragments.MentionsTimelineFragment;
@@ -28,6 +29,8 @@ import com.codepath.apps.twitterclient.helpers.Util;
 
 public class TweetFeedActivity extends AppCompatActivity implements ComposeTweetDialog.OnComposeTweetActionListener {
 
+    TweetsPagerAdapter mPagerAdapter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -36,31 +39,11 @@ public class TweetFeedActivity extends AppCompatActivity implements ComposeTweet
         // Get the view pager
         ViewPager vpPager = (ViewPager) findViewById(R.id.vpTimelinePager);
         // set the viewpager adapter for the pager
-        PagerAdapter pagerAdapter = new TweetsPagerAdapter(getSupportFragmentManager());
-        vpPager.setAdapter(pagerAdapter);
+        mPagerAdapter = new TweetsPagerAdapter(getSupportFragmentManager());
+        vpPager.setAdapter(mPagerAdapter);
 
         PagerSlidingTabStrip tabStrip = (PagerSlidingTabStrip) findViewById(R.id.ptsTimelinePagerHeader);
         tabStrip.setViewPager(vpPager);
-
-        // Attach the page change listener inside the activity
-        vpPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
-
-            @Override
-            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-
-            }
-
-            // This method will be invoked when a new page becomes selected.
-            @Override
-            public void onPageSelected(int position) {
-                refreshCurrentListFragment();
-            }
-
-            @Override
-            public void onPageScrollStateChanged(int state) {
-
-            }
-        });
     }
 
     @Override
@@ -111,7 +94,7 @@ public class TweetFeedActivity extends AppCompatActivity implements ComposeTweet
             if (mComposeDialog != null) {
                 mComposeDialog.dismiss();
             }
-            refreshCurrentListFragment();
+            refreshAllTimelines();
         } else {
             Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT).show();
         }
@@ -119,7 +102,7 @@ public class TweetFeedActivity extends AppCompatActivity implements ComposeTweet
     }
 
 
-    public class TweetsPagerAdapter extends FragmentPagerAdapter {
+    public class TweetsPagerAdapter extends SmartFragmentStatePagerAdapter {
         private String tabTitles[] = {"Home", "Mentions"};
 
         public TweetsPagerAdapter(FragmentManager fm) {
@@ -135,7 +118,6 @@ public class TweetFeedActivity extends AppCompatActivity implements ComposeTweet
                     throw new RuntimeException("Unknown fragment index");
             }
         }
-
 
         @Override
         public void destroyItem(ViewGroup container, int position, Object object) {
@@ -154,12 +136,11 @@ public class TweetFeedActivity extends AppCompatActivity implements ComposeTweet
     }
 
 
-    public void refreshCurrentListFragment() {
-        ViewPager vpPager = (ViewPager) findViewById(R.id.vpTimelinePager);
-        Fragment page = getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.vpTimelinePager + ":" + vpPager.getCurrentItem());
-        // based on the current position you can then cast the page to the correct
-        // class and call the method:
+    public void refreshAllTimelines() {
+        for (int i = 0; i < mPagerAdapter.getCount(); i++) {
+            TweetsListFragment listFragment = ((TweetsListFragment) mPagerAdapter.getRegisteredFragment(i));
+            listFragment.refreshTimeline();
+        }
 
-        ((TweetsListFragment)page).refreshTimeline();
     }
 }
