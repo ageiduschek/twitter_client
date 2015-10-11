@@ -14,6 +14,7 @@ import com.codepath.apps.twitterclient.models.User;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
@@ -80,5 +81,20 @@ public final class Util {
         User user = User.createOrUpdateFromJSON(userJSON);
         edit.putLong(USER_ID_KEY, user.getRemoteId());
         edit.commit();
+    }
+
+    public static String formatNumber(long num) {
+        if (num < 10000) {
+            return Long.toString(num);
+        }
+
+        String suffix[] = new String[]{"", "", "K", "M", "B", "T"};
+        int index = 2;
+        while (num > Math.pow(10, index * 3)) {
+            index++;
+        }
+
+        DecimalFormat fmt = new DecimalFormat("###.#");
+        return fmt.format(num / Math.pow(10, (index-1) * 3)) + suffix[index];
     }
 }

@@ -23,6 +23,8 @@ public class User extends Model {
     private String screenName;
     @Column(name = "profile_image_url")
     private String profileImageUrl;
+    @Column(name = "profile_background_image_url")
+    private String profileBackgroundImageUrl;
     @Column(name = "tag_line")
     private String tagLine;
     @Column(name = "num_followers")
@@ -44,6 +46,10 @@ public class User extends Model {
 
     public String getProfileImageUrl() {
         return profileImageUrl;
+    }
+
+    public String getProfileBackgroundImageUrl() {
+        return profileBackgroundImageUrl;
     }
 
     public String getTagLine() {
@@ -81,6 +87,9 @@ public class User extends Model {
             user.remoteId = json.getLong("id");
             user.screenName = json.getString("screen_name");
             user.profileImageUrl = json.getString("profile_image_url");
+            if (json.getBoolean("profile_use_background_image")) {
+                user.profileBackgroundImageUrl = json.getString("profile_background_image_url");
+            }
             user.tagLine = json.getString("description");
             user.numFollowers = Long.parseLong(json.getString("followers_count"));
             user.numFollowing = Long.parseLong(json.getString("friends_count"));

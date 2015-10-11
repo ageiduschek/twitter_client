@@ -10,6 +10,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.codepath.apps.twitterclient.R;
+import com.codepath.apps.twitterclient.helpers.Util;
 import com.codepath.apps.twitterclient.models.User;
 import com.squareup.picasso.Picasso;
 
@@ -51,6 +52,7 @@ public class ProfileHeaderFragment extends Fragment {
     private void popupateUserProfileHeader(View v) {
         User user = User.lookupWithId(mUserId);
         ImageView ivProfileImage = (ImageView) v.findViewById(R.id.ivProfileImage);
+        ImageView ivBackgroundImage = (ImageView) v.findViewById(R.id.ivBackgroundImage);
         TextView tvName = (TextView) v.findViewById(R.id.tvName);
         TextView tvScreenName = (TextView) v.findViewById(R.id.tvScreenName);
         TextView tvTagline = (TextView) v.findViewById(R.id.tvTagline);
@@ -60,9 +62,14 @@ public class ProfileHeaderFragment extends Fragment {
         tvName.setText(user.getName());
         tvScreenName.setText("@" + user.getScreenName());
         tvTagline.setText(user.getTagLine());
-        tvNumFollowers.setText(user.getNumFollowers() + " followers");
-        tvNumFollowing.setText(user.getNumFollowing() + " following");
+        tvNumFollowers.setText("" + Util.formatNumber(user.getNumFollowers()));
+        tvNumFollowing.setText("" + Util.formatNumber(user.getNumFollowing()));
 
         Picasso.with(getActivity()).load(user.getProfileImageUrl()).into(ivProfileImage);
+
+        String backgroundImageUrl = user.getProfileBackgroundImageUrl();
+        if (backgroundImageUrl != null) {
+            Picasso.with(getActivity()).load(user.getProfileBackgroundImageUrl()).fit().centerCrop().into(ivBackgroundImage);
+        }
     }
 }

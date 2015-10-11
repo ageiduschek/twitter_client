@@ -1,37 +1,111 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:orientation="vertical"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent">
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+    <ImageView
+        android:id="@+id/ivBackgroundImage"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:scaleType="fitCenter"
+        android:adjustViewBounds="true"
+        />
+
+
     <ImageView
         android:id="@+id/ivProfileImage"
-        android:layout_width="30dp"
-        android:layout_height="30dp"/>
-    <TextView
-        android:id="@+id/tvName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-
-    <TextView
-        android:id="@+id/tvScreenName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-
-    <TextView
-        android:id="@+id/tvTagline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:elevation="8dp"
+        android:layout_below="@+id/ivBackgroundImage"
+        android:layout_marginTop="-40dp"
+        android:layout_marginBottom="15dp"
+        android:layout_marginLeft="15dp"
+        android:layout_marginRight="15dp"
         />
 
-    <TextView
-        android:id="@+id/tvNumFollowers"
-        android:layout_width="wrap_content"
+    <RelativeLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        />
+        android:layout_marginLeft="15dp"
+        android:layout_marginRight="15dp"
+        android:layout_below="@id/ivProfileImage"
+        android:layout_marginBottom="15dp"
+        >
+        <TextView
+            android:id="@+id/tvName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MTV News"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            />
 
-    <TextView
-        android:id="@+id/tvNumFollowing"
+        <TextView
+            android:id="@+id/tvScreenName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/tvName"
+            android:layout_alignBaseline="@id/tvName"
+            android:layout_marginLeft="5dp"
+            android:text="\@MTVNews"
+            android:textColor="@color/medium_grey"
+            />
+
+        <TextView
+            android:id="@+id/tvTagline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Music, movie and celeb news fresh to your feed. Tweets by \@AbbyDevora, \@JanelleMeowers, and \@renano. Instagram: \@MTVNews."
+            android:layout_below="@id/tvName"
+            android:layout_marginTop="5dp"
+            />
+    </RelativeLayout>
+
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        />
-</LinearLayout>
+        android:layout_below="@+id/ivBackgroundImage"
+        android:layout_toRightOf="@id/ivProfileImage"
+        android:layout_marginTop="15dp"
+        >
+        <TextView
+            android:id="@+id/tvNumFollowers"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="4.3M"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginLeft="5dp"
+            />
+
+        <TextView
+            android:id="@+id/tvFollowers"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/followers"
+            android:textSize="8sp"
+            android:layout_marginLeft="5dp"
+            />
+
+        <TextView
+            android:id="@+id/tvNumFollowing"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="5,035"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginLeft="15dp"
+            />
+
+        <TextView
+            android:id="@+id/tvFollowing"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/following"
+            android:textSize="8sp"
+            android:layout_marginLeft="5dp"
+            />
+    </LinearLayout>
+</RelativeLayout>
