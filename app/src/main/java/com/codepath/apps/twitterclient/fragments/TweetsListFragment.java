@@ -25,12 +25,12 @@ public abstract class TweetsListFragment extends Fragment {
     private TweetsListAdapter mTweetsListAdapter;
     private SwipeRefreshLayout mSwipeContainer;
     protected TwitterModel mTwitterModel;
+    private boolean mReachedEndOfTimeline = false;
 
     // inflation logic
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        Log.d("ASDF", "tweets list onCreateView");
 
         View v = inflater.inflate(R.layout.fragment_tweets_list, container, false);
         ListView lvTweets = (ListView) v.findViewById(R.id.lvTweets);
@@ -40,8 +40,11 @@ public abstract class TweetsListFragment extends Fragment {
         lvTweets.setOnScrollListener(new EndlessScrollListener() {
             @Override
             public boolean onLoadMore(int page, int totalItemsCount) {
-                extendTimeline();
-                return true; // ONLY if more data is actually being loaded; false otherwise.
+                if (!mReachedEndOfTimeline) {
+                    extendTimeline();
+                    return true; // ONLY if more data is actually being loaded; false otherwise.
+                }
+                return false;
             }
         });
 
@@ -66,23 +69,10 @@ public abstract class TweetsListFragment extends Fragment {
         return v;
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        Log.d("ASDF", "tweets list onStart");
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        Log.d("ASDF", "tweets list onResume");
-    }
-
     // Creation lifecycle event
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d("ASDF", "tweets list onCreate");
 
         mTwitterModel = ((TwitterApplication) getActivity().getApplication()).getTwitterModel();
         if (mTwitterModel == null) {
@@ -92,12 +82,10 @@ public abstract class TweetsListFragment extends Fragment {
     }
 
     public void refreshTimeline() {
-        Log.d("ASDF", "tweets list refreshing timeline");
         fetchNewestTweets(getLoadTweetsDelegate(true /*isRefresh*/));
     }
 
     private void extendTimeline() {
-        Log.d("ASDF", "tweets list extending timeline. Current list: " + mTweetsListAdapter.toString());
         fetchNextTweets(mTweetsListAdapter.getLastKnownId(),
                         getLoadTweetsDelegate(false /*isRefresh*/));
     }
@@ -110,14 +98,15 @@ public abstract class TweetsListFragment extends Fragment {
         return new TwitterModel.OnGetFinishDelegate<List<Tweet>>() {
             @Override
             public void onQueryComplete(List<Tweet> result) {
-                Log.d("ASDF", "onQueryComplete");
+                if (!isRefresh && result.size() < 25) {
+                    mReachedEndOfTimeline = true;
+                }
                 onFinishHelper(result, 0);
             }
 
             @Override
-            public void onIncompleteQuery(List<Tweet> partialResult, int errorMessage) {
-                Log.d("ASDF", "onIncompleteQuery");
-                onFinishHelper(partialResult, errorMessage);
+            public void onNetworkFailure(List<Tweet> localOnlyResult, int errorMessage) {
+                onFinishHelper(localOnlyResult, errorMessage);
             }
 
             public void onFinishHelper(List<Tweet> result, int errorMessage) {
@@ -127,7 +116,6 @@ public abstract class TweetsListFragment extends Fragment {
                     }
 
                     mTweetsListAdapter.addAll(result);
-                    Log.d("ASDF", "Adding " + result.size() + " item(s) to the list adapter");
                 }
                 mSwipeContainer.setRefreshing(false);
 

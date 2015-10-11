@@ -4,7 +4,6 @@
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 tools:context="com.codepath.apps.twitterclient.activities.ProfileActivity">
-
     <FrameLayout
         android:id="@+id/flProfileHeaderContainer"
         android:layout_width="match_parent"

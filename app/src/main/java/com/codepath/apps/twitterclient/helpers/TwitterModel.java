@@ -8,7 +8,6 @@ import android.util.Log;
 import com.activeandroid.query.From;
 import com.activeandroid.query.Select;
 import com.codepath.apps.twitterclient.R;
-import com.codepath.apps.twitterclient.TwitterApplication;
 import com.codepath.apps.twitterclient.TwitterClient;
 import com.codepath.apps.twitterclient.models.Tweet;
 import com.loopj.android.http.JsonHttpResponseHandler;
@@ -42,14 +41,14 @@ public class TwitterModel {
          * Callback when results come back in query.
          * @param result Query result
          */
-        public void onQueryComplete(T result);
+        void onQueryComplete(T result);
 
         /**
          *
-         * @param partialResult Local-only result
+         * @param localOnlyResult Result that only includes items from our local cache
          * @param errorMessage String describing error
          */
-        public void onIncompleteQuery(T partialResult, int errorMessage);
+        void onNetworkFailure(T localOnlyResult, int errorMessage);
     }
 
 
@@ -84,7 +83,6 @@ public class TwitterModel {
         getRestClient(mContext).verifyCredentials(new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                Log.d("ASDF", "GOT VERIFIED CREDENTIALS");
                 Util.setLoggedInUserInfo(mContext, response);
                 mVerifiedCredentials = true;
                 for (Runnable task : mTasksPendingCredentials) {
@@ -147,7 +145,6 @@ public class TwitterModel {
             throw new RuntimeException("Invalid newestId");
         }
 
-        Log.d("ASDF", "GET USER TWEETS BEFORE");
         postWhenVerified(new GetTweetsBeforeTask(newestId, delegate, new UserTimelineQueryAdapter(userId)));
     }
 
@@ -229,7 +226,6 @@ public class TwitterModel {
 
         @Override
         public void fetchRemoteResult(long sinceId, long newestId, JsonHttpResponseHandler httpResponseHandler) {
-            Log.d("ASDF", "USER TIMELINE- GET REMOTE RESULT");
             TwitterModel.getRestClient(mContext).getUserTimeline(mUserId, sinceId, newestId, httpResponseHandler);
         }
     }
@@ -368,14 +364,11 @@ public class TwitterModel {
                 public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
                     T mergedResult = mergeLocalAndRemoteResults(localTweets,
                                                                 parseAndSaveRemoteResult(mContext, response));
-                    Log.d("ASDF", "HTTP QUERY SUCCESS. LENGTH: " + response.length());
-                    Log.d("ASDF", "MERGED RESULT LENGTH: " + ((List<Tweet>)mergedResult).size());
                     postSuccess(mergedResult);
                 }
 
                 @Override
                 public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                    Log.d("ASDF", "HTTP QUERY FAILURE");
                     int errorMessage = generalFailureResponse(errorResponse);
                     postFailure(localTweets, errorMessage);
                 }
@@ -395,7 +388,7 @@ public class TwitterModel {
             mResponseHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    mDelegate.onIncompleteQuery(result, errorMessage);
+                    mDelegate.onNetworkFailure(result, errorMessage);
                 }
             });
         }

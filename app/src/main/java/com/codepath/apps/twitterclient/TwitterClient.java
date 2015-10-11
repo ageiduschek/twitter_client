@@ -95,9 +95,6 @@ public class TwitterClient extends OAuthBaseClient {
             params.put("include_entities", "true");
         }
 
-        Log.w(TAG, "ASDF MAKING A NETWORK CALL TO GET TWEETS");
-        Log.w(TAG, "ASDF: " + apiUrl);
-        Log.w(TAG, "ASDF: params: " + params.toString());
         getClient().get(apiUrl, params, handler);
     }
 
