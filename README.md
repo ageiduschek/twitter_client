@@ -64,6 +64,7 @@ Here's a walkthrough of implemented user stories:
 <img src='https://github.com/ageiduschek/twitter_client/blob/master/app_walkthrough.gif' title='Video Walkthrough' width='' alt='Video Walkthrough' />
 
 Here's a walkthrough of the second part:
+
 <img src='https://github.com/ageiduschek/twitter_client/blob/master/app_walkthrough_v2.gif' title='Video Walkthrough' width='' alt='Video Walkthrough' />
 
 GIF created with [LiceCap](http://www.cockos.com/licecap/).
